@@ -25,6 +25,8 @@ const tableBody = document.querySelector("#ilvlTable tbody");
 const legendEl = document.getElementById("legend");
 const canvas = document.getElementById("gsChart");
 const ctx = canvas.getContext("2d");
+const typeCanvas = document.getElementById("typeChart");
+const typeCtx = typeCanvas.getContext("2d");
 
 let itemIndex = [];
 let itemMap = new Map();
@@ -117,6 +119,65 @@ function renderLegend() {
     .join("");
 }
 
+function renderTypeChart(items) {
+  if (!typeCanvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = typeCanvas.getBoundingClientRect();
+  typeCanvas.width = rect.width * dpr;
+  typeCanvas.height = rect.height * dpr;
+  typeCtx.setTransform(1, 0, 0, 1, 0, 0);
+  typeCtx.scale(dpr, dpr);
+
+  const width = rect.width;
+  const height = rect.height;
+  const padding = { left: 50, right: 20, top: 16, bottom: 34 };
+
+  const order = ["high", "mid", "low", "ranged", "two_hand", "legendary"];
+  const labels = {
+    ...legendLabels,
+    legendary: "Legendary",
+  };
+  const counts = order.map((type) => ({
+    type,
+    value: items.filter((item) => item.type === type).length,
+  }));
+  const maxValue = Math.max(1, ...counts.map((c) => c.value));
+
+  typeCtx.clearRect(0, 0, width, height);
+  typeCtx.fillStyle = "#f8fafc";
+  typeCtx.fillRect(0, 0, width, height);
+
+  typeCtx.strokeStyle = "#e5e7eb";
+  typeCtx.lineWidth = 1;
+  typeCtx.beginPath();
+  typeCtx.moveTo(padding.left, padding.top);
+  typeCtx.lineTo(padding.left, height - padding.bottom);
+  typeCtx.lineTo(width - padding.right, height - padding.bottom);
+  typeCtx.stroke();
+
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const barGap = 12;
+  const barWidth = (chartWidth - barGap * (order.length - 1)) / order.length;
+
+  typeCtx.font = "12px Inter, sans-serif";
+  typeCtx.fillStyle = "#4b5563";
+
+  counts.forEach((entry, index) => {
+    const x = padding.left + index * (barWidth + barGap);
+    const barHeight = (entry.value / maxValue) * chartHeight;
+    const y = height - padding.bottom - barHeight;
+
+    typeCtx.fillStyle = typeColors[entry.type] || "#9ca3af";
+    typeCtx.fillRect(x, y, barWidth, barHeight);
+
+    typeCtx.fillStyle = "#374151";
+    typeCtx.textAlign = "center";
+    typeCtx.fillText(labels[entry.type] || entry.type, x + barWidth / 2, height - 12);
+    typeCtx.fillText(entry.value.toString(), x + barWidth / 2, y - 6);
+  });
+}
+
 function renderTable() {
   const ilvls = Object.keys(ilvlGs)
     .map(Number)
@@ -144,6 +205,7 @@ function renderChart() {
   const rect = canvas.getBoundingClientRect();
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(dpr, dpr);
 
   const width = rect.width;
@@ -151,7 +213,7 @@ function renderChart() {
   const padding = { left: 50, right: 20, top: 20, bottom: 40 };
 
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#0b1220";
+  ctx.fillStyle = "#f8fafc";
   ctx.fillRect(0, 0, width, height);
 
   const ilvls = Object.keys(ilvlGs).map(Number);
@@ -166,7 +228,7 @@ function renderChart() {
   const yScale = (gs) =>
     height - padding.bottom - (gs / (maxGs - minGs)) * (height - padding.top - padding.bottom);
 
-  ctx.strokeStyle = "#1f2937";
+  ctx.strokeStyle = "#e5e7eb";
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(padding.left, padding.top);
@@ -174,7 +236,7 @@ function renderChart() {
   ctx.lineTo(width - padding.right, height - padding.bottom);
   ctx.stroke();
 
-  ctx.fillStyle = "#9ca3af";
+  ctx.fillStyle = "#4b5563";
   ctx.font = "12px Inter, sans-serif";
   ctx.fillText("Item Level", width / 2 - 30, height - 10);
   ctx.save();
@@ -182,6 +244,36 @@ function renderChart() {
   ctx.rotate(-Math.PI / 2);
   ctx.fillText("GearScore", 0, 0);
   ctx.restore();
+
+  const yTicks = 5;
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let i = 0; i <= yTicks; i += 1) {
+    const value = Math.round((maxGs / yTicks) * i);
+    const y = yScale(value);
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+    ctx.fillStyle = "#6b7280";
+    ctx.fillText(value.toString(), padding.left - 6, y);
+  }
+
+  const xTicks = 6;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  for (let i = 0; i <= xTicks; i += 1) {
+    const value = Math.round(minIlvl + ((maxIlvl - minIlvl) / xTicks) * i);
+    const x = xScale(value);
+    ctx.strokeStyle = "#eef2f7";
+    ctx.beginPath();
+    ctx.moveTo(x, padding.top);
+    ctx.lineTo(x, height - padding.bottom);
+    ctx.stroke();
+    ctx.fillStyle = "#6b7280";
+    ctx.fillText(value.toString(), x, height - padding.bottom + 6);
+  }
 
   const types = Object.keys(legendLabels);
   for (const type of types) {
@@ -289,6 +381,7 @@ async function init() {
     renderLegend();
     renderTable();
     renderChart();
+    renderTypeChart(itemIndex);
 
     renderResults(itemIndex, "");
     searchInput.addEventListener("input", (event) => {
@@ -311,7 +404,10 @@ async function loadJson() {
 }
 
 window.addEventListener("resize", () => {
-  if (itemIndex.length) renderChart();
+  if (itemIndex.length) {
+    renderChart();
+    renderTypeChart(itemIndex);
+  }
 });
 
 init();

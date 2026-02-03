@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GS vs Item Level (WotLK) — GsChecker</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <h1>GearScore vs Item Level (WotLK)</h1>
+          <p>
+            Visualización basada en los datos de GsChecker. Busca ítems por ID y
+            obtené su GearScore e item level en tiempo real.
+          </p>
+        </div>
+        <div class="hero-meta" id="summary"></div>
+      </header>
+
+      <section class="panel">
+        <h2>Relación entre GearScore e Item Level</h2>
+        <div class="chart-wrap">
+          <canvas id="gsChart" width="960" height="420"></canvas>
+        </div>
+        <div class="legend" id="legend"></div>
+        <div class="table-wrap">
+          <table id="ilvlTable">
+            <thead>
+              <tr>
+                <th>Item Level</th>
+                <th>High</th>
+                <th>Mid</th>
+                <th>Low</th>
+                <th>Ranged</th>
+                <th>Two-Hand</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Buscador de ítems</h2>
+        <div class="search">
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Buscar por ID (ej: 50732)"
+            autocomplete="off"
+          />
+          <span id="resultCount"></span>
+        </div>
+        <div id="results" class="results"></div>
+      </section>
+
+      <footer class="footer">
+        <span>Datos: GsChecker/static/GS.json</span>
+        <span>Fuente items: wotlk.evowow.com</span>
+      </footer>
+    </div>
+
+    <script src="gs-data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

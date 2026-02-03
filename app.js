@@ -383,19 +383,20 @@ function calculateGearScore() {
       return;
     }
   }
-
-  const ilvls = Object.keys(ilvlGs).map(Number).sort((a, b) => a - b);
-  const nearest = ilvls.reduce(
-    (prev, curr) => (Math.abs(curr - ilvl) < Math.abs(prev - ilvl) ? curr : prev),
-    ilvls[0]
-  );
-  const nearestRow = ilvlGs[nearest];
-  const nearestValue = nearestRow?.[itemType[type]];
-  if (nearestValue) {
-    calcResult.textContent = `Estimated GS: ${nearestValue} (nearest ilvl: ${nearest}).`;
+  const coefficients = {
+    high: { a: 2.87, b: -264 },
+    mid: { a: 2.14, b: -196 },
+    low: { a: 1.62, b: -150 },
+    ranged: { a: 0.9, b: -83 },
+    two_hand: { a: 5.74, b: -527 },
+  };
+  const coeff = coefficients[type];
+  if (!coeff) {
+    calcResult.textContent = "No GS data available for that type/ilvl.";
     return;
   }
-  calcResult.textContent = "No GS data available for that type/ilvl.";
+  const estimated = Math.max(0, Math.round(coeff.a * ilvl + coeff.b));
+  calcResult.textContent = `Estimated GS: ${estimated} (linear approximation).`;
 }
 
 function updateCoefficients() {

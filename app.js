@@ -10,9 +10,9 @@ const typeColors = {
 };
 
 const legendLabels = {
-  high: "High",
-  mid: "Mid",
-  low: "Low",
+  high: "High-slot",
+  mid: "Mid-slot",
+  low: "Low-slot",
   ranged: "Ranged",
   two_hand: "Two-Hand",
 };
@@ -27,12 +27,43 @@ const canvas = document.getElementById("gsChart");
 const ctx = canvas.getContext("2d");
 const typeCanvas = document.getElementById("typeChart");
 const typeCtx = typeCanvas.getContext("2d");
+const hoverInfo = document.getElementById("hoverInfo");
+const typeToggles = document.querySelectorAll("input[data-type]");
+const calcIlvlInput = document.getElementById("calcIlvl");
+const calcTypeSelect = document.getElementById("calcType");
+const calcBtn = document.getElementById("calcBtn");
+const calcResult = document.getElementById("calcResult");
+const coefEls = {
+  high: {
+    a: document.getElementById("coef-high-a"),
+    b: document.getElementById("coef-high-b"),
+  },
+  mid: {
+    a: document.getElementById("coef-mid-a"),
+    b: document.getElementById("coef-mid-b"),
+  },
+  low: {
+    a: document.getElementById("coef-low-a"),
+    b: document.getElementById("coef-low-b"),
+  },
+  ranged: {
+    a: document.getElementById("coef-ranged-a"),
+    b: document.getElementById("coef-ranged-b"),
+  },
+  two_hand: {
+    a: document.getElementById("coef-two-hand-a"),
+    b: document.getElementById("coef-two-hand-b"),
+  },
+};
 
 let itemIndex = [];
 let itemMap = new Map();
 let ilvlGs = {};
 let itemType = {};
 let itemNames = {};
+let ilvlList = [];
+const visibleTypes = new Set(Object.keys(legendLabels));
+let hoverIlvl = null;
 
 function setStatus(message) {
   summaryEl.textContent = message;
@@ -100,11 +131,11 @@ function renderSummary(items) {
   const cachedNames = Object.keys(itemNames || {}).length;
 
   summaryEl.innerHTML = `
-    <div><span class="badge">Ítems: ${formatNumber(total)}</span></div>
-    <div>Nombres en caché: ${formatNumber(cachedNames)}</div>
-    <div>High: ${formatNumber(grouped.high || 0)}</div>
-    <div>Mid: ${formatNumber(grouped.mid || 0)}</div>
-    <div>Low: ${formatNumber(grouped.low || 0)}</div>
+    <div><span class="badge">Items: ${formatNumber(total)}</span></div>
+    <div>Cached names: ${formatNumber(cachedNames)}</div>
+    <div>High-slot: ${formatNumber(grouped.high || 0)}</div>
+    <div>Mid-slot: ${formatNumber(grouped.mid || 0)}</div>
+    <div>Low-slot: ${formatNumber(grouped.low || 0)}</div>
     <div>Ranged: ${formatNumber(grouped.ranged || 0)}</div>
     <div>Two-Hand: ${formatNumber(grouped.two_hand || 0)}</div>
   `;
@@ -216,7 +247,7 @@ function renderChart() {
   ctx.fillStyle = "#f8fafc";
   ctx.fillRect(0, 0, width, height);
 
-  const ilvls = Object.keys(ilvlGs).map(Number);
+  const ilvls = ilvlList;
   const gsValues = Object.values(ilvlGs).flatMap((row) => row);
   const minIlvl = Math.min(...ilvls);
   const maxIlvl = Math.max(...ilvls);
@@ -275,7 +306,7 @@ function renderChart() {
     ctx.fillText(value.toString(), x, height - padding.bottom + 6);
   }
 
-  const types = Object.keys(legendLabels);
+  const types = Object.keys(legendLabels).filter((type) => visibleTypes.has(type));
   for (const type of types) {
     const points = Object.keys(ilvlGs)
       .map(Number)
@@ -308,12 +339,90 @@ function renderChart() {
       ctx.fill();
     });
   }
+
+  if (hoverIlvl !== null) {
+    const x = xScale(hoverIlvl);
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, padding.top);
+    ctx.lineTo(x, height - padding.bottom);
+    ctx.stroke();
+  }
+}
+
+function renderHoverInfo(ilvl) {
+  if (!hoverInfo) return;
+  if (ilvl === null) {
+    hoverInfo.textContent = "Move your mouse over the chart to see values.";
+    return;
+  }
+  const values = Object.keys(legendLabels)
+    .filter((type) => visibleTypes.has(type))
+    .map((type) => {
+      const value = ilvlGs[ilvl]?.[itemType[type]] ?? "-";
+      return `${legendLabels[type]}: ${value}`;
+    })
+    .join(" · ");
+  hoverInfo.textContent = `Item Level ${ilvl} → ${values}`;
+}
+
+function calculateGearScore() {
+  if (!calcIlvlInput || !calcTypeSelect || !calcResult) return;
+  const ilvl = Number(calcIlvlInput.value);
+  const type = calcTypeSelect.value;
+  if (!Number.isFinite(ilvl) || ilvl <= 0) {
+    calcResult.textContent = "Please enter a valid item level.";
+    return;
+  }
+  const row = ilvlGs[ilvl];
+  if (row && itemType[type] !== undefined) {
+    const value = row[itemType[type]];
+    if (value) {
+      calcResult.textContent = `Estimated GS: ${value} (exact ILVL_GS match).`;
+      return;
+    }
+  }
+
+  const ilvls = Object.keys(ilvlGs).map(Number).sort((a, b) => a - b);
+  const nearest = ilvls.reduce(
+    (prev, curr) => (Math.abs(curr - ilvl) < Math.abs(prev - ilvl) ? curr : prev),
+    ilvls[0]
+  );
+  const nearestRow = ilvlGs[nearest];
+  const nearestValue = nearestRow?.[itemType[type]];
+  if (nearestValue) {
+    calcResult.textContent = `Estimated GS: ${nearestValue} (nearest ilvl: ${nearest}).`;
+    return;
+  }
+  calcResult.textContent = "No GS data available for that type/ilvl.";
+}
+
+function updateCoefficients() {
+  const ilvls = Object.keys(ilvlGs).map(Number).sort((a, b) => a - b);
+  const types = Object.keys(coefEls);
+  types.forEach((type) => {
+    const index = itemType[type];
+    if (index === undefined) return;
+    const points = ilvls
+      .map((ilvl) => ({ ilvl, gs: ilvlGs[ilvl]?.[index] ?? 0 }))
+      .filter((p) => p.gs > 0);
+    if (points.length < 2) return;
+    const first = points[0];
+    const last = points[points.length - 1];
+    const a = (last.gs - first.gs) / (last.ilvl - first.ilvl);
+    const b = first.gs - a * first.ilvl;
+    const aEl = coefEls[type]?.a;
+    const bEl = coefEls[type]?.b;
+    if (aEl) aEl.textContent = a.toFixed(2);
+    if (bEl) bEl.textContent = b.toFixed(0);
+  });
 }
 
 function renderResults(items, query) {
   const trimmed = query.trim();
   if (!trimmed) {
-    resultsEl.innerHTML = "<div class=\"result-card\">Ingresa un ID o nombre para buscar.</div>";
+    resultsEl.innerHTML = "<div class=\"result-card\">Enter an ID or name to search.</div>";
     resultCountEl.textContent = "";
     return;
   }
@@ -321,8 +430,8 @@ function renderResults(items, query) {
   const normalized = normalizeText(trimmed);
   const isIdQuery = /^\d+$/.test(trimmed);
   if (!isIdQuery && Object.keys(itemNames || {}).length === 0) {
-    resultsEl.innerHTML = "<div class=\"result-card\">No hay nombres en caché. Generá item-names.js para habilitar la búsqueda por nombre.</div>";
-    resultCountEl.textContent = "0 resultados";
+    resultsEl.innerHTML = "<div class=\"result-card\">No cached names found. Generate item-names.js to enable name search.</div>";
+    resultCountEl.textContent = "0 results";
     return;
   }
 
@@ -334,23 +443,23 @@ function renderResults(items, query) {
     })
     .slice(0, 200);
 
-  resultCountEl.textContent = `${filtered.length} resultados`;
+  resultCountEl.textContent = `${filtered.length} results`;
   resultsEl.innerHTML = filtered
     .map((item) => {
       const ilvl = item.ilvl ?? "-";
       const gs = item.gs ?? "-";
-      const typeLabel = item.type.replace("_", "-");
-      const name = item.name ? item.name : "(sin nombre en caché)";
+      const typeLabel = legendLabels[item.type] || item.type.replace("_", "-");
+      const name = item.name ? item.name : "(no cached name)";
       const link = `https://wotlk.evowow.com/?item=${item.id}`;
       return `
         <div class="result-card">
           <strong>${name} <span class="badge">ID ${item.id}</span></strong>
           <div class="result-meta">
-            <span>Tipo: ${typeLabel}</span>
+            <span>Type: ${typeLabel}</span>
             <span>Item Level: ${ilvl}</span>
             <span>GearScore: ${gs}</span>
           </div>
-          <a href="${link}" target="_blank" rel="noreferrer">Abrir en wotlk.evowow.com</a>
+          <a href="${link}" target="_blank" rel="noreferrer">Open on wotlk.evowow.com</a>
         </div>
       `;
     })
@@ -367,8 +476,9 @@ function normalizeText(value) {
     .trim();
 }
 
+
 async function init() {
-  setStatus("Cargando datos de GsChecker...");
+  setStatus("Loading GearScore data...");
   try {
     const embedded = window.GS_DATA;
     const data = embedded ? embedded : await loadJson();
@@ -376,30 +486,78 @@ async function init() {
     const { items, map } = buildIndex(data);
     itemIndex = items;
     itemMap = map;
+    ilvlList = Object.keys(ilvlGs).map(Number).sort((a, b) => a - b);
 
     renderSummary(itemIndex);
     renderLegend();
     renderTable();
     renderChart();
     renderTypeChart(itemIndex);
+    renderHoverInfo(null);
+    updateCoefficients();
 
     renderResults(itemIndex, "");
     searchInput.addEventListener("input", (event) => {
       renderResults(itemIndex, event.target.value);
     });
+
+    calcBtn?.addEventListener("click", () => {
+      calculateGearScore();
+    });
+    calcIlvlInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") calculateGearScore();
+    });
+
+    typeToggles.forEach((toggle) => {
+      toggle.addEventListener("change", (event) => {
+        const type = event.target.dataset.type;
+        if (!type) return;
+        if (event.target.checked) {
+          visibleTypes.add(type);
+        } else {
+          visibleTypes.delete(type);
+        }
+        renderChart();
+        renderHoverInfo(hoverIlvl);
+      });
+    });
+
+    canvas.addEventListener("mousemove", (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const minIlvl = Math.min(...ilvlList);
+      const maxIlvl = Math.max(...ilvlList);
+      const padding = { left: 50, right: 20, top: 20, bottom: 40 };
+      const ratio = (x - padding.left) / (rect.width - padding.left - padding.right);
+      const clamped = Math.min(1, Math.max(0, ratio));
+      const target = minIlvl + (maxIlvl - minIlvl) * clamped;
+      const nearest = ilvlList
+        .reduce((prev, curr) => (Math.abs(curr - target) < Math.abs(prev - target) ? curr : prev), minIlvl);
+      hoverIlvl = nearest;
+      renderChart();
+      renderHoverInfo(nearest);
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      hoverIlvl = null;
+      renderChart();
+      renderHoverInfo(null);
+    });
+
+    
   } catch (err) {
     summaryEl.innerHTML = `
       <div class="badge">Error</div>
-      <div>No se pudo cargar GS.json</div>
+      <div>Could not load GS.json</div>
     `;
     resultsEl.innerHTML =
-      "<div class=\"result-card\">No hay datos disponibles.</div>";
+      "<div class=\"result-card\">No data available.</div>";
   }
 }
 
 async function loadJson() {
   const res = await fetch(DATA_URL);
-  if (!res.ok) throw new Error("No se pudo cargar GS.json");
+  if (!res.ok) throw new Error("Could not load GS.json");
   return res.json();
 }
 

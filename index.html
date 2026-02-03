@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GS vs Item Level (WotLK) — GsChecker</title>
+    <title>GS vs Item Level (WotLK)</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -12,20 +12,20 @@
         <div>
           <h1>GearScore vs Item Level (WotLK)</h1>
           <p>
-            Visualización basada en los datos de GsChecker. Busca ítems por ID y
-            obtené su GearScore e item level en tiempo real.
+            Visualization based on a local GearScore table. Search items by ID or name and
+            get their GearScore and item level in real time.
           </p>
         </div>
         <div class="hero-meta" id="summary"></div>
       </header>
 
       <section class="panel">
-        <h2>Buscador de ítems</h2>
+        <h2>Item search</h2>
         <div class="search">
           <input
             id="searchInput"
             type="search"
-            placeholder="Buscar por ID o nombre (ej: Shadowmourne)"
+            placeholder="Search by ID or name (e.g. Shadowmourne)"
             autocomplete="off"
           />
           <span id="resultCount"></span>
@@ -34,7 +34,31 @@
       </section>
 
       <section class="panel">
-        <h2>Relación entre GearScore e Item Level</h2>
+        <h2>GearScore vs Item Level</h2>
+        <div class="controls">
+          <div class="control-group">
+            <span class="control-label">Visible series</span>
+            <label class="toggle">
+              <input type="checkbox" data-type="high" checked /> High-slot
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-type="mid" checked /> Mid-slot
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-type="low" checked /> Low-slot
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-type="ranged" checked /> Ranged
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-type="two_hand" checked /> Two-Hand
+            </label>
+          </div>
+          <div class="control-group">
+            <span class="control-label">Hover details</span>
+            <div id="hoverInfo" class="hover-info">Move your mouse over the chart to see values.</div>
+          </div>
+        </div>
         <div class="chart-wrap">
           <canvas id="gsChart" width="960" height="420"></canvas>
         </div>
@@ -47,9 +71,9 @@
             <thead>
               <tr>
                 <th>Item Level</th>
-                <th>High</th>
-                <th>Mid</th>
-                <th>Low</th>
+                <th>High-slot</th>
+                <th>Mid-slot</th>
+                <th>Low-slot</th>
                 <th>Ranged</th>
                 <th>Two-Hand</th>
               </tr>
@@ -59,9 +83,63 @@
         </div>
       </section>
 
+      <section class="panel">
+        <h2>How is GearScore calculated?</h2>
+        <div class="formula-card">
+          <p>
+            A GearScore table is used per <strong>type</strong> and <strong>item level</strong>.
+            A common approximation is a linear model per type:
+          </p>
+          <p class="formula">GS(ilvl, type) ≈ a_type · ilvl + b_type</p>
+          <p class="hint">
+            Where <strong>GS</strong> is the estimated GearScore, <strong>ilvl</strong> is
+            the item level, and <strong>a_type</strong>, <strong>b_type</strong> are type-specific
+            coefficients (High-slot/Mid-slot/Low-slot/Ranged/Two-Hand).
+          </p>
+          <p class="hint">
+            Example (High-slot) using points (ilvl=200, GS=310) and (ilvl=284, GS=551):
+            a≈2.87 and b≈-264 (linear approximation).
+          </p>
+          <p class="hint">
+            Many GearScore implementations also apply <strong>slot weights</strong> and
+            <strong>item quality scaling</strong>. This page renders the exact values from
+            the local ILVL_GS table.
+          </p>
+          <ul class="coeff-list">
+            <li>High-slot: a≈<span id="coef-high-a">—</span>, b≈<span id="coef-high-b">—</span></li>
+            <li>Mid-slot: a≈<span id="coef-mid-a">—</span>, b≈<span id="coef-mid-b">—</span></li>
+            <li>Low-slot: a≈<span id="coef-low-a">—</span>, b≈<span id="coef-low-b">—</span></li>
+            <li>Ranged: a≈<span id="coef-ranged-a">—</span>, b≈<span id="coef-ranged-b">—</span></li>
+            <li>Two-Hand: a≈<span id="coef-two-hand-a">—</span>, b≈<span id="coef-two-hand-b">—</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Quick GearScore calculator</h2>
+        <div class="calculator">
+          <label class="calc-field">
+            <span>Item Level</span>
+            <input id="calcIlvl" type="number" min="1" step="1" placeholder="e.g. 245" />
+          </label>
+          <label class="calc-field">
+            <span>Type</span>
+            <select id="calcType">
+              <option value="high">High-slot</option>
+              <option value="mid">Mid-slot</option>
+              <option value="low">Low-slot</option>
+              <option value="ranged">Ranged</option>
+              <option value="two_hand">Two-Hand</option>
+            </select>
+          </label>
+          <button id="calcBtn" class="btn">Calculate</button>
+          <div id="calcResult" class="calc-result">Enter values to estimate GS.</div>
+        </div>
+      </section>
+
       <footer class="footer">
-        <span>Datos: GsChecker/static/GS.json</span>
-        <span>Fuente items: wotlk.evowow.com</span>
+        <span>Data: GS.json</span>
+        <span>Item source: wotlk.evowow.com</span>
       </footer>
     </div>
 

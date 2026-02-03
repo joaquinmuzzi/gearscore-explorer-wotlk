@@ -85,6 +85,132 @@ body {
   height: auto;
 }
 
+.controls {
+  display: grid;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: #f8fafc;
+}
+
+.control-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+}
+
+.control-label {
+  font-weight: 600;
+  color: #374151;
+  margin-right: 6px;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: #ffffff;
+  font-size: 13px;
+  color: #374151;
+}
+
+.toggle input {
+  accent-color: var(--accent);
+}
+
+.hover-info {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.formula-card {
+  background: #f8fafc;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.formula {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.coeff-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  color: #374151;
+  font-size: 13px;
+}
+
+.calculator {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: end;
+}
+
+.calc-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.calc-field input,
+.calc-field select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: #ffffff;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.calc-result {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: #f8fafc;
+  color: #374151;
+  font-size: 14px;
+}
+
+.btn {
+  justify-self: start;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: #ffffff;
+  color: #1f2937;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn:hover {
+  border-color: #cbd5f5;
+  color: #1d4ed8;
+}
+
+
 .legend {
   display: flex;
   flex-wrap: wrap;

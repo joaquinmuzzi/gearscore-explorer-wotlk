@@ -30,6 +30,7 @@ let itemIndex = [];
 let itemMap = new Map();
 let ilvlGs = {};
 let itemType = {};
+let itemNames = {};
 
 function setStatus(message) {
   summaryEl.textContent = message;
@@ -40,6 +41,7 @@ function buildIndex(data) {
   const legendary = data.LEGENDARY || {};
   ilvlGs = data.ILVL_GS || {};
   itemType = data.ITEM_TYPE || {};
+  itemNames = window.ITEM_NAMES || {};
 
   const items = [];
   const map = new Map();
@@ -53,6 +55,7 @@ function buildIndex(data) {
           ilvl: Number(ilvl),
           type,
           gs: gsValue,
+          name: itemNames[itemId] || "",
         };
         items.push(entry);
         map.set(itemId, entry);
@@ -71,6 +74,7 @@ function buildIndex(data) {
         ilvl: null,
         type: "legendary",
         gs: gsValue,
+        name: itemNames[itemId] || "",
       };
       items.push(entry);
       map.set(itemId, entry);
@@ -91,9 +95,11 @@ function renderSummary(items) {
     acc[item.type] = (acc[item.type] || 0) + 1;
     return acc;
   }, {});
+  const cachedNames = Object.keys(itemNames || {}).length;
 
   summaryEl.innerHTML = `
     <div><span class="badge">Ítems: ${formatNumber(total)}</span></div>
+    <div>Nombres en caché: ${formatNumber(cachedNames)}</div>
     <div>High: ${formatNumber(grouped.high || 0)}</div>
     <div>Mid: ${formatNumber(grouped.mid || 0)}</div>
     <div>Low: ${formatNumber(grouped.low || 0)}</div>
@@ -215,13 +221,25 @@ function renderChart() {
 function renderResults(items, query) {
   const trimmed = query.trim();
   if (!trimmed) {
-    resultsEl.innerHTML = "<div class=\"result-card\">Ingresa un ID para buscar.</div>";
+    resultsEl.innerHTML = "<div class=\"result-card\">Ingresa un ID o nombre para buscar.</div>";
     resultCountEl.textContent = "";
     return;
   }
 
+  const normalized = normalizeText(trimmed);
+  const isIdQuery = /^\d+$/.test(trimmed);
+  if (!isIdQuery && Object.keys(itemNames || {}).length === 0) {
+    resultsEl.innerHTML = "<div class=\"result-card\">No hay nombres en caché. Generá item-names.js para habilitar la búsqueda por nombre.</div>";
+    resultCountEl.textContent = "0 resultados";
+    return;
+  }
+
   const filtered = items
-    .filter((item) => item.id.includes(trimmed))
+    .filter((item) => {
+      if (isIdQuery) return item.id.includes(trimmed);
+      if (!item.name) return false;
+      return normalizeText(item.name).includes(normalized);
+    })
     .slice(0, 200);
 
   resultCountEl.textContent = `${filtered.length} resultados`;
@@ -230,10 +248,11 @@ function renderResults(items, query) {
       const ilvl = item.ilvl ?? "-";
       const gs = item.gs ?? "-";
       const typeLabel = item.type.replace("_", "-");
+      const name = item.name ? item.name : "(sin nombre en caché)";
       const link = `https://wotlk.evowow.com/?item=${item.id}`;
       return `
         <div class="result-card">
-          <strong>Item ID ${item.id}</strong>
+          <strong>${name} <span class="badge">ID ${item.id}</span></strong>
           <div class="result-meta">
             <span>Tipo: ${typeLabel}</span>
             <span>Item Level: ${ilvl}</span>
@@ -244,6 +263,16 @@ function renderResults(items, query) {
       `;
     })
     .join("");
+}
+
+function normalizeText(value) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 async function init() {

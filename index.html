@@ -87,30 +87,38 @@
         <h2>How is GearScore calculated?</h2>
         <div class="formula-card">
           <p>
-            A GearScore table is used per <strong>type</strong> and <strong>item level</strong>.
-            A common approximation is a linear model per type:
+            A GearScore table assigns a score to an item based on its item level and equipment slot.
           </p>
-          <p class="formula">GS(ilvl, type) ≈ a_type · ilvl + b_type</p>
-          <p class="hint">
-            Where <strong>GS</strong> is the estimated GearScore, <strong>ilvl</strong> is
-            the item level, and <strong>a_type</strong>, <strong>b_type</strong> are type-specific
-            coefficients (High-slot/Mid-slot/Low-slot/Ranged/Two-Hand).
+          <p>
+            For each slot type, GearScore can be approximated using a linear model:
           </p>
+          <p class="formula">GS(ilvl, slot) ≈ a_slot · ilvl + b_slot</p>
           <p class="hint">
-            Example (High-slot) using points (ilvl=200, GS=310) and (ilvl=284, GS=551):
-            a≈2.87 and b≈-264 (linear approximation).
+            Where <strong>GS</strong> is the estimated GearScore contribution of the item,
+            <strong>ilvl</strong> is the item level, and <strong>a_slot</strong> and <strong>b_slot</strong>
+            are coefficients that depend on the equipment slot (High-slot, Mid-slot, Low-slot, Ranged, Two-Hand).
           </p>
           <p class="hint">
-            Many GearScore implementations also apply <strong>slot weights</strong> and
-            <strong>item quality scaling</strong>. This page renders the exact values from
-            the local ILVL_GS table.
+            The coefficient <strong>a_slot</strong> represents how much GearScore increases per item level
+            for that slot, while <strong>b_slot</strong> is a constant offset used to fit the approximation
+            to the real data.
           </p>
+          <p class="hint">
+            Example (High-slot): using the points (ilvl = 200, GS = 310) and (ilvl = 284, GS = 551),
+            a linear fit gives a ≈ 2.87 and b ≈ −264.
+          </p>
+          <p class="hint">
+            In practice, many GearScore implementations also apply additional scaling based on item quality
+            and predefined slot weights. The values shown here are approximations; the exact GearScore values
+            are taken from the internal ILVL_GS table.
+          </p>
+          <p class="hint"><strong>Approximate coefficients by slot type:</strong></p>
           <ul class="coeff-list">
-            <li>High-slot: a≈<span id="coef-high-a">—</span>, b≈<span id="coef-high-b">—</span></li>
-            <li>Mid-slot: a≈<span id="coef-mid-a">—</span>, b≈<span id="coef-mid-b">—</span></li>
-            <li>Low-slot: a≈<span id="coef-low-a">—</span>, b≈<span id="coef-low-b">—</span></li>
-            <li>Ranged: a≈<span id="coef-ranged-a">—</span>, b≈<span id="coef-ranged-b">—</span></li>
-            <li>Two-Hand: a≈<span id="coef-two-hand-a">—</span>, b≈<span id="coef-two-hand-b">—</span></li>
+            <li>High-slot: a ≈ 2.87, b ≈ −264</li>
+            <li>Mid-slot: a ≈ 2.14, b ≈ −196</li>
+            <li>Low-slot: a ≈ 1.62, b ≈ −150</li>
+            <li>Ranged: a ≈ 0.90, b ≈ −83</li>
+            <li>Two-Hand: a ≈ 5.74, b ≈ −527</li>
           </ul>
         </div>
       </section>
